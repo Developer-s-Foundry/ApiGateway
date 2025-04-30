@@ -6,6 +6,9 @@ services:
       dockerfile: ApiGatewayApp/Dockerfile
     environment:
       - OTEL_EXPORTER_ENDPOINT=http://jaeger:4317
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2UNENCRYPTEDSUPPORT=true
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: jaeger
