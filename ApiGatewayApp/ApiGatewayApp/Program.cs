@@ -15,8 +15,6 @@ try
     // Log startup information
     Log.Information("Starting up ApiGateway");
 
-    Log.Information("Starting up ApiGateway");
-
     var builder = WebApplication.CreateBuilder(args);
 
     // Configure services
@@ -61,7 +59,7 @@ try
     app.MapReverseProxy(); 
     
     Log.Information("Starting ApiGateway web host");
-    
+
     app.Run();
 }
 catch (Exception ex)
