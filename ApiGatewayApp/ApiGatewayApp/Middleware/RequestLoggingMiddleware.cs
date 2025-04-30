@@ -17,7 +17,8 @@ public class RequestLoggingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var stopwatch = Stopwatch.StartNew();        // Create a scope with request info
+        var stopwatch = Stopwatch.StartNew();        
+        // Create a scope with request info
         using var scope = _logger.BeginScope(new Dictionary<string, object>
         {
             ["CorrelationId"] = context.TraceIdentifier ?? "unknown",
