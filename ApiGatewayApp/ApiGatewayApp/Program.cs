@@ -47,7 +47,11 @@ try
         };
     });
 
-    app.UseHttpsRedirection();
+    // Only use HTTPS redirection in production environments
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHttpsRedirection();
+    }
 
     // Add custom request logging middleware
     app.UseMiddleware<RequestLoggingMiddleware>();
@@ -56,8 +60,8 @@ try
 
     app.MapControllers();
 
-    app.MapReverseProxy(); 
-    
+    app.MapReverseProxy();
+
     Log.Information("Starting ApiGateway web host");
 
     app.Run();
