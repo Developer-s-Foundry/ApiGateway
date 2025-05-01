@@ -1,6 +1,4 @@
-# Render Blueprint for API Gateway Application
-services:  
-  # API Gateway web service
+services:
   - type: web
     name: api-gateway
     runtime: docker
@@ -9,7 +7,7 @@ services:
     dockerfilePath: ./ApiGatewayApp/ApiGatewayApp/Dockerfile
     dockerContext: .
     numInstances: 1
-    healthCheckPath: /    
+    healthCheckPath: /
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production      
@@ -24,29 +22,26 @@ services:
       - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
         value: true
       - fromGroup: api-gateway-config
-  # Jaeger service for distributed tracing
-  - type: web # will be open to the public internet
+
+  - type: web
     name: jaeger
     runtime: image
     image:
       url: jaegertracing/all-in-one:latest
     plan: free
-    region: oregon # Must match the region of the API Gateway service
+    region: oregon
     envVars:
       - key: COLLECTOR_ZIPKIN_HOST_PORT
         value: :9411
       - key: COLLECTOR_OTLP_ENABLED
         value: "true"
-    ports:
-      - port: 4317
-        protocol: TCP
-      - port: 4318
-        protocol: HTTP  
-      - port: 16686
-        protocol: HTTP
-    autoDeploy: false # Prevents unnecessary Jaeger redeployments
+    startCommand: >
+      --collector.otlp.enabled=true
+      --collector.zipkin.host-port=:9411
+      --query.port=10000
+      --collector.http-port=10000
+    autoDeploy: false
 
-# Environment variable groups for shared configuration
 envVarGroups:
   - name: api-gateway-config
     envVars:
