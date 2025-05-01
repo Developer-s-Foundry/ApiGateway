@@ -1,5 +1,6 @@
 using ApiGatewayApp.Extensions;
 using ApiGatewayApp.Middleware;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Serilog;
 using Serilog.Events;
 
@@ -23,14 +24,18 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
+    // Add health checks
+    builder.Services.AddHealthChecks()
+        .AddCheck("self", () => HealthCheckResult.Healthy(), new[] { "api_gateway" });
+
     // Configure OpenTelemetry
     builder.AddTelemetry();
 
     // Configure Serilog
     builder.AddLogging();
 
-    var app = builder.Build();    
-    
+    var app = builder.Build();
+
     // Configure the HTTP request pipeline.
     app.UseSwagger();
     app.UseSwaggerUI(c =>
@@ -62,6 +67,8 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+
+    app.MapHealthChecks("/health");
 
     app.MapReverseProxy();
 
