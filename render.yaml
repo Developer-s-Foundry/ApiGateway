@@ -1,6 +1,5 @@
 # Render Blueprint for API Gateway Application
-services:
-  # API Gateway web service
+services:  # API Gateway web service
   - type: web
     name: api-gateway
     runtime: docker
@@ -10,6 +9,8 @@ services:
     dockerContext: .
     numInstances: 1
     healthCheckPath: /swagger
+    envVarGroups:
+      - api-gateway-config
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
@@ -43,3 +44,7 @@ envVarGroups:
         value: Production
       - key: LOGGING_LEVEL
         value: Information
+      - key: USER_SERVICE_URL
+        value: https://user-service.onrender.com
+      - key: AUTH_SERVICE_URL
+        value: https://auth-service.onrender.com

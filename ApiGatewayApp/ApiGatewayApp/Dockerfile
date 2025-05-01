@@ -2,20 +2,18 @@
 
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
 WORKDIR /app
-#EXPOSE 8080
-#EXPOSE 8081
+EXPOSE 8080
 
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["ApiGatewayApp/ApiGatewayApp.csproj", "ApiGatewayApp/"]
-RUN dotnet restore "./ApiGatewayApp/ApiGatewayApp.csproj"
+COPY ["ApiGatewayApp/ApiGatewayApp/ApiGatewayApp.csproj", "ApiGatewayApp/ApiGatewayApp/"]
+RUN dotnet restore "./ApiGatewayApp/ApiGatewayApp/ApiGatewayApp.csproj"
 COPY . .
-WORKDIR "/src/ApiGatewayApp"
+WORKDIR "/src/ApiGatewayApp/ApiGatewayApp"
 RUN dotnet build "./ApiGatewayApp.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
