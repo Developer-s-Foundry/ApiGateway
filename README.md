@@ -43,3 +43,7 @@ After starting, you can:
 - Access the API Gateway at http://localhost:8080
 - Access Swagger UI at http://localhost:8080/swagger
 - View traces in Jaeger UI at http://localhost:16686
+
+### Production Deployment with Render.com
+
+This application includes a `render.yaml` Blueprint file for easy deployment to Render.com.
