@@ -23,7 +23,7 @@ services:
         value: true
 
   # Jaeger service for distributed tracing
-  - type: pserv
+  - type: web # will be open to the public internet
     name: jaeger
     runtime: image
     image:
