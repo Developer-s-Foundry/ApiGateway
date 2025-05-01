@@ -3,27 +3,33 @@ services:
     name: api-gateway
     runtime: docker
     plan: free 
-    region: oregon    
+    region: oregon      
     dockerfilePath: ./ApiGatewayApp/ApiGatewayApp/Dockerfile
     dockerContext: .
     numInstances: 1
-    healthCheckPath: /    
+    healthCheckPath: /health
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
-        value: Production        
+        value: Production
       - key: ASPNETCORE_URLS
         value: http://+:8080
       - key: OTEL_EXPORTER_ENDPOINT
-        value: http://jaeger-pjqc.onrender.com:4317
+        value: http://jaeger-pjqc.onrender.com:4317      
       - key: OTEL_EXPORTER_OTLP_PROTOCOL
         value: grpc
+      - key: OTEL_EXPORTER_OTLP_PROTOCOL_FALLBACK
+        value: http
       - key: OTEL_EXPORTER_OTLP_INSECURE
         value: "true"
       - key: DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2UNENCRYPTEDSUPPORT
         value: true
+      - key: OTEL_METRIC_EXPORT_INTERVAL
+        value: "60000"
+      - key: OTEL_TRACES_SAMPLER
+        value: "always_on"
       - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
         value: true
-      - fromGroup: api-gateway-config
+      - fromGroup: api-gateway-config  
   - type: web
     name: jaeger
     runtime: image
@@ -36,6 +42,13 @@ services:
         value: :9411
       - key: COLLECTOR_OTLP_ENABLED
         value: "true"
+      - key: COLLECTOR_HEALTH_CHECK_HTTP_PORT
+        value: "14269"
+      - key: COLLECTOR_HTTP_SERVER_HOST_PORT
+        value: :14268
+      - key: QUERY_BASE_PATH
+        value: /
+    healthCheckPath: /
     startCommand: >
       --collector.otlp.enabled=true
       --collector.otlp.grpc.host-port=:4317
@@ -43,13 +56,18 @@ services:
       --collector.zipkin.host-port=:9411
       --query.port=16686
       --collector.http-port=14268
-      --prometheus.server-url=http://prometheus:9090
+      --collector.grpc-port=14250
+      --collector.health-check-http-port=14269
+      --query.base-path=/
     autoDeploy: false
 
 envVarGroups:
   - name: api-gateway-config
-    envVars:
-      - key: DOTNET_ENVIRONMENT
+    envVars:      - key: DOTNET_ENVIRONMENT
         value: Production
       - key: LOGGING_LEVEL
         value: Information
+      - key: USER_SERVICE_URL
+        value: https://user-service-abcd.onrender.com
+      - key: AUTH_SERVICE_URL
+        value: https://auth-service-efgh.onrender.com
