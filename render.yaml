@@ -1,5 +1,6 @@
 # Render Blueprint for API Gateway Application
-services:  # API Gateway web service
+services:  
+  # API Gateway web service
   - type: web
     name: api-gateway
     runtime: docker
@@ -9,8 +10,6 @@ services:  # API Gateway web service
     dockerContext: .
     numInstances: 1
     healthCheckPath: /swagger
-    envVarGroups:
-      - api-gateway-config
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
@@ -22,6 +21,8 @@ services:  # API Gateway web service
         value: true
       - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
         value: true
+    envVarGroups:
+      - api-gateway-config
 
   # Jaeger service for distributed tracing
   - type: web # will be open to the public internet
@@ -44,7 +45,3 @@ envVarGroups:
         value: Production
       - key: LOGGING_LEVEL
         value: Information
-      - key: USER_SERVICE_URL
-        value: https://user-service.onrender.com
-      - key: AUTH_SERVICE_URL
-        value: https://auth-service.onrender.com
