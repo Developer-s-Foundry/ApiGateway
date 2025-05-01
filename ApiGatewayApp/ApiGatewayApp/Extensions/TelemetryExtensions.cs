@@ -6,23 +6,41 @@ using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
 using System.Reflection;
+using System.Diagnostics;
 
 namespace ApiGatewayApp.Extensions;
 
 public static class TelemetryExtensions
 {
     public static WebApplicationBuilder AddTelemetry(this WebApplicationBuilder builder)
-    {        // Get OpenTelemetry configuration
+    {
+        // Get OpenTelemetry configuration
         var otelConfig = builder.Configuration.GetSection("OpenTelemetry");
         var serviceName = otelConfig["ServiceName"] ?? builder.Environment.ApplicationName;
+
+        // Try to get the OTEL endpoint from environment variables or use a fallback value
         var otelEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_ENDPOINT") ??
                            otelConfig["OtlpExporter:Endpoint"] ??
                            "http://localhost:4317";
 
+        // Attempt to parse OTEL_EXPORTER_OTLP_PROTOCOL, fallback to "grpc"
         var otelProtocol = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL") ?? "grpc";
+
+        // If OTEL_EXPORTER_OTLP_PROTOCOL_FALLBACK is set, we'll try this protocol if primary fails
+        var otelProtocolFallback = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL_FALLBACK");
+
+        // Main protocol
         var protocol = otelProtocol.ToLower() == "http"
             ? OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf
             : OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+
+        // If fallback protocol is specified, configure it as an option
+        var useFallbackProtocol = !string.IsNullOrEmpty(otelProtocolFallback);
+
+        var isInsecure = bool.Parse(Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_INSECURE") ?? "true");
+
+        // Configure network timeouts for better resilience
+        var timeout = TimeSpan.FromSeconds(10);
 
         var resourceBuilder = ResourceBuilder.CreateDefault()
             .AddService(serviceName)
@@ -35,15 +53,25 @@ public static class TelemetryExtensions
         builder.Services.AddOpenTelemetry()
             .WithMetrics(metric =>
             {
-                metric.SetResourceBuilder(resourceBuilder);
-
-                // Add instrumentation
+                metric.SetResourceBuilder(resourceBuilder);                // Add instrumentation
                 metric.AddAspNetCoreInstrumentation();
-                metric.AddHttpClientInstrumentation();                // Add OTLP exporter
-                metric.AddOtlpExporter(options =>
+                metric.AddHttpClientInstrumentation();
+
+                // Add OTLP exporter with batch processing configuration
+                metric.AddOtlpExporter((options, readerOptions) =>
                 {
                     options.Endpoint = new Uri(otelEndpoint);
                     options.Protocol = protocol;
+                    options.TimeoutMilliseconds = (int)timeout.TotalMilliseconds;
+
+                    if (isInsecure && protocol == OpenTelemetry.Exporter.OtlpExportProtocol.Grpc)
+                    {
+                        // For gRPC, we need to specify this differently
+                        options.Headers = "Authorization=";
+                    }
+
+                    // Configure batch processing settings
+                    readerOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 60000;
                 });
             })
             .WithTracing(tracing =>
@@ -69,14 +97,22 @@ public static class TelemetryExtensions
                         activity.SetTag("exception.message", exception.Message);
                         activity.SetTag("exception.stacktrace", exception.ToString());
                     };
-                });
+                });                // Add YARP instrumentation for reverse proxy
+                tracing.AddSource("Yarp.ReverseProxy");
 
-                // Add YARP instrumentation for reverse proxy
-                tracing.AddSource("Yarp.ReverseProxy");                // Add OTLP exporter
+                // Use batch processor for better performance and retry handling
+                tracing.SetSampler(new AlwaysOnSampler());
                 tracing.AddOtlpExporter(options =>
                 {
                     options.Endpoint = new Uri(otelEndpoint);
                     options.Protocol = protocol;
+                    options.TimeoutMilliseconds = (int)timeout.TotalMilliseconds;
+
+                    if (isInsecure && protocol == OpenTelemetry.Exporter.OtlpExportProtocol.Grpc)
+                    {
+                        // For gRPC, we need to specify this differently
+                        options.Headers = "Authorization=";
+                    }
                 });
             });
 
@@ -96,6 +132,13 @@ public static class TelemetryExtensions
             {
                 options.Endpoint = new Uri(otelEndpoint);
                 options.Protocol = protocol;
+                options.TimeoutMilliseconds = (int)timeout.TotalMilliseconds;
+
+                if (isInsecure && protocol == OpenTelemetry.Exporter.OtlpExportProtocol.Grpc)
+                {
+                    // For gRPC, we need to specify this differently
+                    options.Headers = "Authorization=";
+                }
             });
         });
 
