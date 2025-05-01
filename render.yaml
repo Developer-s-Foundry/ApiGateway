@@ -5,24 +5,25 @@ services:
     name: api-gateway
     runtime: docker
     plan: free 
-    region: oregon 
+    region: oregon    
     dockerfilePath: ./ApiGatewayApp/ApiGatewayApp/Dockerfile
     dockerContext: .
     numInstances: 1
-    healthCheckPath: /swagger
+    healthCheckPath: /    
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
-        value: Production
+        value: Production      
       - key: ASPNETCORE_URLS
         value: http://+:8080
       - key: OTEL_EXPORTER_ENDPOINT
-        value: http://jaeger:4317
+        value: https://jaeger-pjqc.onrender.com:4317
+      - key: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: grpc
       - key: DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2UNENCRYPTEDSUPPORT
         value: true
       - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
         value: true
       - fromGroup: api-gateway-config
-
   # Jaeger service for distributed tracing
   - type: web # will be open to the public internet
     name: jaeger
@@ -34,6 +35,15 @@ services:
     envVars:
       - key: COLLECTOR_ZIPKIN_HOST_PORT
         value: :9411
+      - key: COLLECTOR_OTLP_ENABLED
+        value: "true"
+    ports:
+      - port: 4317
+        protocol: TCP
+      - port: 4318
+        protocol: HTTP  
+      - port: 16686
+        protocol: HTTP
     autoDeploy: false # Prevents unnecessary Jaeger redeployments
 
 # Environment variable groups for shared configuration

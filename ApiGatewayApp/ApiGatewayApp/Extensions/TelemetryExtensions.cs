@@ -12,13 +12,17 @@ namespace ApiGatewayApp.Extensions;
 public static class TelemetryExtensions
 {
     public static WebApplicationBuilder AddTelemetry(this WebApplicationBuilder builder)
-    {
-        // Get OpenTelemetry configuration
+    {        // Get OpenTelemetry configuration
         var otelConfig = builder.Configuration.GetSection("OpenTelemetry");
         var serviceName = otelConfig["ServiceName"] ?? builder.Environment.ApplicationName;
         var otelEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_ENDPOINT") ??
                            otelConfig["OtlpExporter:Endpoint"] ??
                            "http://localhost:4317";
+
+        var otelProtocol = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL") ?? "grpc";
+        var protocol = otelProtocol.ToLower() == "http"
+            ? OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf
+            : OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
 
         var resourceBuilder = ResourceBuilder.CreateDefault()
             .AddService(serviceName)
@@ -35,13 +39,11 @@ public static class TelemetryExtensions
 
                 // Add instrumentation
                 metric.AddAspNetCoreInstrumentation();
-                metric.AddHttpClientInstrumentation();
-
-                // Add OTLP exporter
+                metric.AddHttpClientInstrumentation();                // Add OTLP exporter
                 metric.AddOtlpExporter(options =>
                 {
                     options.Endpoint = new Uri(otelEndpoint);
-                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                    options.Protocol = protocol;
                 });
             })
             .WithTracing(tracing =>
@@ -70,13 +72,11 @@ public static class TelemetryExtensions
                 });
 
                 // Add YARP instrumentation for reverse proxy
-                tracing.AddSource("Yarp.ReverseProxy");
-
-                // Add OTLP exporter
+                tracing.AddSource("Yarp.ReverseProxy");                // Add OTLP exporter
                 tracing.AddOtlpExporter(options =>
                 {
                     options.Endpoint = new Uri(otelEndpoint);
-                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                    options.Protocol = protocol;
                 });
             });
 
@@ -91,13 +91,11 @@ public static class TelemetryExtensions
 
             // Configure log filtering
             logging.IncludeFormattedMessage = true;
-            logging.IncludeScopes = true;
-
-            // Add OTLP exporter for logs
+            logging.IncludeScopes = true;            // Add OTLP exporter for logs
             logging.AddOtlpExporter(options =>
             {
                 options.Endpoint = new Uri(otelEndpoint);
-                options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                options.Protocol = protocol;
             });
         });
 
