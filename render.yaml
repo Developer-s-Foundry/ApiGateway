@@ -21,8 +21,7 @@ services:
         value: true
       - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
         value: true
-    envVarGroups:
-      - api-gateway-config
+      - fromGroup: api-gateway-config
 
   # Jaeger service for distributed tracing
   - type: web # will be open to the public internet
