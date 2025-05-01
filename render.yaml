@@ -4,7 +4,7 @@ services:
   - type: web
     name: api-gateway
     runtime: docker
-    plan: starter 
+    plan: free 
     region: oregon 
     dockerfilePath: ./ApiGatewayApp/ApiGatewayApp/Dockerfile
     dockerContext: .
@@ -28,7 +28,7 @@ services:
     runtime: image
     image:
       url: jaegertracing/all-in-one:latest
-    plan: starter
+    plan: free
     region: oregon # Must match the region of the API Gateway service
     envVars:
       - key: COLLECTOR_ZIPKIN_HOST_PORT
