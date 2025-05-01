@@ -63,7 +63,8 @@ services:
 
 envVarGroups:
   - name: api-gateway-config
-    envVars:      - key: DOTNET_ENVIRONMENT
+    envVars:      
+      - key: DOTNET_ENVIRONMENT
         value: Production
       - key: LOGGING_LEVEL
         value: Information
