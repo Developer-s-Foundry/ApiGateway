@@ -1,6 +1,8 @@
 ﻿using ApiGatewayApp.Common;
 using ApiGatewayApp.Configs;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Yarp.ReverseProxy.Transforms;
 
@@ -8,21 +10,36 @@ namespace ApiGatewayApp.Extensions;
 
 public static class ServiceExtensions
 {
+    public static void AddLoggingToConsole(this IServiceCollection services)
+    {
+        services.AddLogging(loggingBuilder =>
+        {
+            loggingBuilder.AddConsole();
+        });
+    }
     public static void ConfigureProxyService(this IServiceCollection services)
     {
         services.AddReverseProxy()
-            .LoadFromMemory(ProxyConfig.GetRoutes(), ProxyConfig.GetClusters())
-            .AddTransforms(builder =>
+        .LoadFromMemory(ProxyConfig.GetRoutes(), ProxyConfig.GetClusters())
+        .AddTransforms(builder =>
+        {
+            builder.AddRequestTransform(transformContext =>
             {
-                builder.AddRequestTransform(transformContext =>
-                {
-                    var apiKey = "";
-                    var timestamp = "";
-                    string concatenatedString = string.Join(':', new {apiKey, timestamp } );
-                    var signature = Convert.ToBase64String(Encoding.UTF8.GetBytes(concatenatedString)); ;
-                    transformContext.HttpContext.Request.Headers.Add("X-API-GATEWAY-SIGNATURE", signature);
-                });
+                string apiKey = ConstantVariables.apiKey;
+                var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                string signature = GenerateSignature(apiKey, timestamp);
+
+                string userId = transformContext.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+                string userEmail = transformContext.HttpContext.User.FindFirstValue(ClaimTypes.Email);
+                builder.AddXForwarded(ForwardedTransformActions.Set);   
+                transformContext.ProxyRequest.Headers.Add("X-API-GATEWAY-TIMESTAMP", timestamp);
+                transformContext.ProxyRequest.Headers.Add("X-API-GATEWAY-SIGNATURE", signature);
+                transformContext.ProxyRequest.Headers.Add("X-USER-ID", userId);
+                transformContext.ProxyRequest.Headers.Add("X-USER-EMAIL", userEmail);
+
+                return ValueTask.CompletedTask;
             });
+        });
     }
 
     public static void
@@ -45,9 +62,12 @@ public static class ServiceExtensions
                 };
             });
     }
+
+    private static string GenerateSignature(string apiKey, string timestamp)
+    {
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(apiKey));
+        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes($"{apiKey}:{timestamp}"));
+        return Convert.ToBase64String(hash);
+    }
 }
-/*api_key = request. headers ["X-API-GATEWAY-KEY" ]
-api_timestamp = request . headers ["X-API-GATEWAY-TIMESTAMP"]
-api_signature = request . headers[ ]
-user_id = request. headers ["X-USER-ID" ]
-user_email = request. headers ["X-USER-EMAIL"]*/
+
