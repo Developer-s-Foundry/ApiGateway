@@ -7,22 +7,23 @@ services:
     dockerfilePath: ./ApiGatewayApp/ApiGatewayApp/Dockerfile
     dockerContext: .
     numInstances: 1
-    healthCheckPath: /
+    healthCheckPath: /    
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
-        value: Production      
+        value: Production        
       - key: ASPNETCORE_URLS
         value: http://+:8080
       - key: OTEL_EXPORTER_ENDPOINT
-        value: https://jaeger-pjqc.onrender.com:4317
+        value: http://jaeger-pjqc.onrender.com:4317
       - key: OTEL_EXPORTER_OTLP_PROTOCOL
         value: grpc
+      - key: OTEL_EXPORTER_OTLP_INSECURE
+        value: "true"
       - key: DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2UNENCRYPTEDSUPPORT
         value: true
       - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
         value: true
       - fromGroup: api-gateway-config
-
   - type: web
     name: jaeger
     runtime: image
@@ -37,9 +38,12 @@ services:
         value: "true"
     startCommand: >
       --collector.otlp.enabled=true
+      --collector.otlp.grpc.host-port=:4317
+      --collector.otlp.http.host-port=:4318
       --collector.zipkin.host-port=:9411
-      --query.port=10000
-      --collector.http-port=10000
+      --query.port=16686
+      --collector.http-port=14268
+      --prometheus.server-url=http://prometheus:9090
     autoDeploy: false
 
 envVarGroups:
