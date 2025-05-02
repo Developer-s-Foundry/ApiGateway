@@ -5,7 +5,7 @@ namespace ApiGatewayApp.Configs;
 
 public static class ProxyConfig
 {
-    private readonly static string userServiceUrl = Environment.GetEnvironmentVariable("apiGatewayUserServiceUrl")!; 
+    private readonly static string userServiceUrl = ConstantVariables.userSericeUrl;  
     private readonly static string authServiceUrl = ConstantVariables.authServiceUrl; 
 
     public static IReadOnlyList<RouteConfig> GetRoutes()

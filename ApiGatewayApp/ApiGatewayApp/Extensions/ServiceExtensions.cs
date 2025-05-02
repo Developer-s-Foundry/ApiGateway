@@ -1,7 +1,9 @@
 ﻿using ApiGatewayApp.Common;
 using ApiGatewayApp.Configs;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using Yarp.ReverseProxy.Transforms;
@@ -17,6 +19,7 @@ public static class ServiceExtensions
             loggingBuilder.AddConsole();
         });
     }
+
     public static void ConfigureProxyService(this IServiceCollection services)
     {
         services.AddReverseProxy()
@@ -29,9 +32,24 @@ public static class ServiceExtensions
                 var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
                 string signature = GenerateSignature(apiKey, timestamp);
 
-                string userId = transformContext.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
-                string userEmail = transformContext.HttpContext.User.FindFirstValue(ClaimTypes.Email);
-                builder.AddXForwarded(ForwardedTransformActions.Set);   
+                //string userId = transformContext.ProxyRequest.Headers.ProxyAuthorization[];
+                string userId = string.Empty;
+                string userEmail = string.Empty;
+
+                if (transformContext.ProxyRequest.Headers.TryGetValues("Authorization", out var authHeaders))
+                {
+                    var authHeader = authHeaders.FirstOrDefault();
+                    if (!string.IsNullOrEmpty(authHeader) && AuthenticationHeaderValue.TryParse(authHeader, out var headerValue))
+                    {
+                        var token = headerValue.Parameter;
+                        // Use System.IdentityModel.Tokens.Jwt to decode and read claims
+                        var handler = new JwtSecurityTokenHandler();
+                        var jwt = handler.ReadJwtToken(token);
+                        userId = jwt.Claims.FirstOrDefault(c => c.Type == "user_id")?.Value;
+                        userEmail = jwt.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+                    }
+                }
+
                 transformContext.ProxyRequest.Headers.Add("X-API-GATEWAY-TIMESTAMP", timestamp);
                 transformContext.ProxyRequest.Headers.Add("X-API-GATEWAY-SIGNATURE", signature);
                 transformContext.ProxyRequest.Headers.Add("X-USER-ID", userId);
@@ -47,20 +65,24 @@ public static class ServiceExtensions
         (this IServiceCollection services)
     {
         var validIssuer = ConstantVariables.authServiceUrl;
-        var validAudience = Environment.GetEnvironmentVariable("apiGatewayUserServiceUrl")!;
 
-        services.AddAuthentication("Bearer")
-            .AddJwtBearer("Bearer", options =>
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.Authority = validIssuer;
+            options.RequireHttpsMetadata = false; 
+            options.TokenValidationParameters = new TokenValidationParameters
             {
-                options.Authority = validIssuer;
-                options.RequireHttpsMetadata = false; // Set to true in production
-                options.Audience = "https://localhost:7073";
+                ValidateIssuer = true,
+                ValidIssuer = validIssuer,
 
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidIssuer = validIssuer
-                };
-            });
+                ValidateAudience = true,
+                ValidAudiences = new[] { ConstantVariables.apiGatewayUrl, ConstantVariables.userSericeUrl },
+
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true
+            };
+        });
     }
 
     private static string GenerateSignature(string apiKey, string timestamp)
@@ -70,4 +92,3 @@ public static class ServiceExtensions
         return Convert.ToBase64String(hash);
     }
 }
-
