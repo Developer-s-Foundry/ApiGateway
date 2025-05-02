@@ -6,8 +6,8 @@ namespace ApiGatewayApp.Configs;
 
 public static class ProxyConfig
 {
-    private readonly static string userServiceUrl = "http://localhost:5001"; //Read env variable when obtained
-    private readonly static string authServiceUrl = "http://localhost:5001"; //Read env variable when obtained
+    private readonly static string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL") ?? "http://localhost:5001";
+    private readonly static string authServiceUrl = Environment.GetEnvironmentVariable("AUTH_SERVICE_URL") ?? "http://localhost:5001";
 
     public static IReadOnlyList<RouteConfig> GetRoutes()
     {
