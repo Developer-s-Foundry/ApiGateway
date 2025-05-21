@@ -1,28 +1,17 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using ApiGatewayApp.Common;
 using Yarp.ReverseProxy.Configuration;
-using static System.Net.WebRequestMethods;
 
 namespace ApiGatewayApp.Configs;
 
 public static class ProxyConfig
 {
-    private readonly static string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL") ?? "http://localhost:5001";
-    private readonly static string authServiceUrl = Environment.GetEnvironmentVariable("AUTH_SERVICE_URL") ?? "http://localhost:5001";
+    private readonly static string userServiceUrl = ConstantVariables.userSericeUrl;  
+    private readonly static string authServiceUrl = ConstantVariables.authServiceUrl; 
 
     public static IReadOnlyList<RouteConfig> GetRoutes()
     {
         return new[]
         {
-            new RouteConfig
-            {
-                RouteId = "userRoute",
-                ClusterId = "userCluster",
-                Match = new RouteMatch
-                {
-                    Path = "/api/user/{**catch-all}" //switch to right path later
-                },
-                AuthorizationPolicy = "Anonymous" //Switch to specified auth when authentication is implemented
-            },
             new RouteConfig
             {
                 RouteId = "authRoute",
@@ -32,6 +21,17 @@ public static class ProxyConfig
                     Path = "/api/auth/{**catch-all}" //switch to right path later
                 },
                 AuthorizationPolicy = "Anonymous" //Switch to specified auth when authentication is implemented
+            },
+
+            new RouteConfig
+            {
+                RouteId = "userRoute",
+                ClusterId = "userCluster",
+                Match = new RouteMatch
+                {
+                    Path = "/api/{**catch-all}" //switch to right path later
+                },
+                AuthorizationPolicy = "Anonymous" //Switch to specified auth when authentication is implemented                
             }
         };
     }
@@ -41,18 +41,19 @@ public static class ProxyConfig
         {
             new ClusterConfig
             {
-                ClusterId = "userCluster",
-                Destinations = new Dictionary<string, DestinationConfig>
-                {
-                    { "userService", new DestinationConfig { Address = userServiceUrl } }
-                }
-            },
-            new ClusterConfig
-            {
                 ClusterId = "authCluster",
                 Destinations = new Dictionary<string, DestinationConfig>
                 {
                     { "authService", new DestinationConfig { Address = authServiceUrl } }
+                }
+            },
+
+            new ClusterConfig
+            {
+                ClusterId = "userCluster",
+                Destinations = new Dictionary<string, DestinationConfig>
+                {
+                    { "userService", new DestinationConfig { Address = userServiceUrl } }
                 }
             }
         };

@@ -20,6 +20,7 @@ try
 
     // Configure services
     builder.Services.ConfigureProxyService();
+    builder.Services.ConfigureAuthServices();
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
@@ -27,6 +28,8 @@ try
     // Add health checks
     builder.Services.AddHealthChecks()
         .AddCheck("self", () => HealthCheckResult.Healthy(), new[] { "api_gateway" });
+
+    // Configure the HTTP request pipeline.
 
     // Configure OpenTelemetry
     builder.AddTelemetry();
@@ -64,7 +67,10 @@ try
     // Add custom request logging middleware
     app.UseMiddleware<RequestLoggingMiddleware>();
 
-    app.UseAuthorization();
+
+    app.UseAuthentication();
+
+    app.UseAuthorization(); main
 
     app.MapControllers();
 
