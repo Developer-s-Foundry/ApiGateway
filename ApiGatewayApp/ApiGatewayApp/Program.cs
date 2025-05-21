@@ -70,7 +70,7 @@ try
 
     app.UseAuthentication();
 
-    app.UseAuthorization(); main
+    app.UseAuthorization(); 
 
     app.MapControllers();
 
